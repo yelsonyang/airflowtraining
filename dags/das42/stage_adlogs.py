@@ -60,9 +60,9 @@ for table in JOB_ARGS["tables"]:
    
 # add s3 sensor to check the presence of log files
     sensor = S3KeySensor(
-        task_id=“s3_key_sensor_task”,
+        task_id="s3_key_sensor_task",
         bucket_name=BUCKET_NAME,
-        bucket_key=“das42-airflow-training-s3",
+        bucket_key="das42-airflow-training-s3",
         s3_conn_id=S3_CONN_ID
     )
 # set the order
