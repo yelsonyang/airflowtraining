@@ -10,6 +10,9 @@ from datetime import datetime, timedelta
 from das42.utils.job_config import JobConfig
 from das42.utils.sql_utils import SqlUtils
 
+# import package S3KeySensor
+from airflow.operators import S3KeySensor
+
 JOB_ARGS = JobConfig.get_config()
 DEFAULTS = JOB_ARGS["default_args"]
 ENV = JOB_ARGS["env_name"]
