@@ -1,10 +1,14 @@
 import os
 import logging
+import boto3
 
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.contrib.operators.snowflake_operator import SnowflakeOperator
 from datetime import datetime, timedelta
+
+# import package S3KeySensor for step6
+from airflow.operators import S3KeySensor
 
 # custom utils
 from das42.utils.job_config import JobConfig
@@ -18,6 +22,8 @@ SF_CONN_ID = JOB_ARGS["snowflake_conn_id"]
 SF_ROLE = JOB_ARGS["snowflake"]["role"]
 SF_WAREHOUSE = JOB_ARGS["snowflake"]["warehouse"]
 SF_DATABASE = JOB_ARGS["snowflake"]["database"]
+# reference variable here
+BUCKET_NAME = JOB_ARGS[""]
 
 # create DAG
 DAG = DAG(
@@ -39,7 +45,7 @@ for table in JOB_ARGS["tables"]:
         )
 
     query_log = SqlUtils.load_query(stage_sql_path).split("---")
-    
+
     stage_adlogs_hourly_job = SnowflakeOperator(
         task_id="stage_logs_{}_hourly".format(table),
         snowflake_conn_id=SF_CONN_ID,
@@ -55,4 +61,14 @@ for table in JOB_ARGS["tables"]:
         dag=DAG
     )
 
-    stage_adlogs_hourly_job >> stage_finish
+# add s3 sensor to check the presence of log files
+sensor = S3KeySensor(
+    task_id="s3_key_sensor_task",
+    bucket_name="das42-airflow-training-s3",
+    bucket_key="das42-airflow-training-s3",
+    s3_conn_id="das42-airflow-training-s3"
+)
+
+# set the order
+stage_adlogs_hourly_job >> sensor
+sensor >> stage_finish
