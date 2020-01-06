@@ -22,7 +22,7 @@ SF_ROLE = JOB_ARGS["snowflake"]["role"]
 SF_WAREHOUSE = JOB_ARGS["snowflake"]["warehouse"]
 SF_DATABASE = JOB_ARGS["snowflake"]["database"]
 BUCKET_NAME = JOB_ARGS["aws_rl_bucket_name"]
-S3_CONN_ID = JOB_ARGS["aws_conn_id"]
+AWS_CONN_ID = JOB_ARGS["aws_conn_id"]
 
 # create DAG
 DAG = DAG(
@@ -43,8 +43,29 @@ for table in JOB_ARGS["tables"]:
         table
         )
 
+    KEY_PATH = os.path.join(
+        "raw-ingester-out",
+        "manifests",
+        table,
+        # tested using specific arguments
+        "20190704",
+        "15",
+        "completed.manifest"
+        )
+
     query_log = SqlUtils.load_query(stage_sql_path).split("---")
-    
+
+    sensor = S3KeySensor(
+        task_id="s3_key_sensor_{}_task".format(table),
+        #bucket_key="raw-ingester-out/manifests/*",
+        bucket_key=KEY_PATH,
+        wildcard_match=True,
+        bucket_name=BUCKET_NAME,
+        aws_conn_id=AWS_CONN_ID,
+        timeout=18*60*60,
+        poke_interval=120
+    )
+
     stage_adlogs_hourly_job = SnowflakeOperator(
         task_id="stage_logs_{}_hourly".format(table),
         snowflake_conn_id=SF_CONN_ID,
@@ -59,7 +80,27 @@ for table in JOB_ARGS["tables"]:
         trigger_rule='all_done',
         dag=DAG
     )
-    
+
+    transform_sql_path = os.path.join(
+        JOB_ARGS["transform_sql_path"],
+        "transform_query"
+        )
+
+    transform_log = SqlUtils.load_query(transform_sql_path).split("---")
+
+    transform_adlogs_hourly_job = SnowflakeOperator(
+        task_id = "transform_logs_{}_hourly".format(table),
+        snowflake_conn_id=SF_CONN_ID,
+        warehouse=SF_WAREHOUSE,
+        database=SF_DATABASE,
+        sql=transform_log,
+        params={
+            "env": ENV,
+            "team_name": TEAM_NAME
+        },
+        autocommit=True,
+        trigger_rule='all_done',
+        dag=DAG   
    
 # add s3 sensor to check the presence of log files
     sensor = S3KeySensor(
@@ -68,5 +109,6 @@ for table in JOB_ARGS["tables"]:
         bucket_key="das42-airflow-training-s3",
         s3_conn_id=S3_CONN_ID
     )
-# set the order
-    sensor >> stage_adlogs_hourly_job >> stage_finish
+
+    # set the order
+    sensor >> stage_adlogs_hourly_job >> transform_adlogs_hourly_job >> stage_finish
