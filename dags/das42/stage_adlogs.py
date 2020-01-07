@@ -100,8 +100,8 @@ for table in JOB_ARGS["tables"]:
         },
         autocommit=True,
         trigger_rule='all_done',
-        dag=DAG   
+        dag=DAG
     )
-
+    # test out 
     # set the order
     sensor >> stage_adlogs_hourly_job >> transform_adlogs_hourly_job >> stage_finish
