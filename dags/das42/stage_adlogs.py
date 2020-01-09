@@ -43,13 +43,17 @@ for table in JOB_ARGS["tables"]:
         table
         )
 
+    exec_date = '{{ds_nodash}}'
+    exec_date_hour = str('{{ts_nodash}}')
+
+
     KEY_PATH = os.path.join(
         "raw-ingester-out",
         "manifests",
         table,
         # tested using specific arguments
-        "20190704",
-        "15",
+        exec_date,
+        '15',
         "completed.manifest"
         )
 
