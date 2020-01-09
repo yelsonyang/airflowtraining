@@ -8,6 +8,6 @@ tables:
     - track
     - int
 stage_sql_path: adlogs/load_raw_logs
-transform_sql_path: adlogs/transform_log
+transform_sql_path: adlogs/transform_logs
 parent_directory: 'stage_{}_logs_dev'
 log_path: 'log/*'

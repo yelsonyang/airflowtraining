@@ -38,11 +38,6 @@ stage_finish = DummyOperator(task_id="adlogs_snowflake_staging_finish")
 # staging ad logs hourly
 for table in JOB_ARGS["tables"]:
 
-    stage_sql_path = os.path.join(
-        JOB_ARGS["stage_sql_path"],
-        table
-        )
-
     KEY_PATH = os.path.join(
         "raw-ingester-out",
         "manifests",
@@ -52,8 +47,6 @@ for table in JOB_ARGS["tables"]:
         "15",
         "completed.manifest"
         )
-
-    query_log = SqlUtils.load_query(stage_sql_path).split("---")
 
     sensor = S3KeySensor(
         task_id="s3_key_sensor_{}_task".format(table),
@@ -65,6 +58,13 @@ for table in JOB_ARGS["tables"]:
         timeout=18*60*60,
         poke_interval=120
     )
+
+    stage_sql_path = os.path.join(
+        JOB_ARGS["stage_sql_path"],
+        table
+        )
+
+    query_log = SqlUtils.load_query(stage_sql_path).split("---")
 
     stage_adlogs_hourly_job = SnowflakeOperator(
         task_id="stage_logs_{}_hourly".format(table),
@@ -83,7 +83,7 @@ for table in JOB_ARGS["tables"]:
 
     transform_sql_path = os.path.join(
         JOB_ARGS["transform_sql_path"],
-        "transform_query"
+        table
         )
 
     transform_log = SqlUtils.load_query(transform_sql_path).split("---")
@@ -102,6 +102,6 @@ for table in JOB_ARGS["tables"]:
         trigger_rule='all_done',
         dag=DAG
     )
-    # test out 
+
     # set the order
     sensor >> stage_adlogs_hourly_job >> transform_adlogs_hourly_job >> stage_finish
