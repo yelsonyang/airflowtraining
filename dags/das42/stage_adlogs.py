@@ -35,18 +35,18 @@ DAG = DAG(
 
 stage_finish = DummyOperator(task_id="adlogs_snowflake_staging_finish")
 
-# staging ad logs hourly
+# recursive table jobs for the stage_simple_adlog
 for table in JOB_ARGS["tables"]:
 
-    stage_sql_path = os.path.join(
-        JOB_ARGS["stage_sql_path"],
-        table
-        )
+    # exec_date = "{{ ds_nodash }}"
+    # exec_hour = "{{ ts_nodash }}"
+    # exec_hour_time = ("Time:",str(exec_hour))
 
     exec_date = '{{ds_nodash}}'
     exec_date_hour = str('{{ts_nodash}}')
 
 
+    # look for the key path, used in s3 key
     KEY_PATH = os.path.join(
         "raw-ingester-out",
         "manifests",
@@ -57,11 +57,9 @@ for table in JOB_ARGS["tables"]:
         "completed.manifest"
         )
 
-    query_log = SqlUtils.load_query(stage_sql_path).split("---")
-
+    # create s3keysensor 
     sensor = S3KeySensor(
         task_id="s3_key_sensor_{}_task".format(table),
-        #bucket_key="raw-ingester-out/manifests/*",
         bucket_key=KEY_PATH,
         wildcard_match=True,
         bucket_name=BUCKET_NAME,
@@ -70,6 +68,14 @@ for table in JOB_ARGS["tables"]:
         poke_interval=120
     )
 
+    stage_sql_path = os.path.join(
+        JOB_ARGS["stage_sql_path"],
+        table
+        )
+
+    query_log = SqlUtils.load_query(stage_sql_path).split("---")
+
+    # staging ad logs hourly
     stage_adlogs_hourly_job = SnowflakeOperator(
         task_id="stage_logs_{}_hourly".format(table),
         snowflake_conn_id=SF_CONN_ID,
@@ -87,7 +93,7 @@ for table in JOB_ARGS["tables"]:
 
     transform_sql_path = os.path.join(
         JOB_ARGS["transform_sql_path"],
-        "transform_query"
+        table
         )
 
     transform_log = SqlUtils.load_query(transform_sql_path).split("---")
@@ -106,6 +112,6 @@ for table in JOB_ARGS["tables"]:
         trigger_rule='all_done',
         dag=DAG
     )
-    # test out 
+
     # set the order
     sensor >> stage_adlogs_hourly_job >> transform_adlogs_hourly_job >> stage_finish
