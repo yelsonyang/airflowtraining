@@ -42,8 +42,7 @@ for table in JOB_ARGS["tables"]:
     # exec_hour = "{{ ts_nodash }}"
     # exec_hour_time = ("Time:",str(exec_hour))
 
-    exec_date = '{{ds_nodash}}'
-    exec_date_hour = str('{{ts_nodash}}')
+    execution_date = '{{execution_date.strftime("%Y%m%d/%H")}}'
 
 
     # look for the key path, used in s3 key
@@ -51,9 +50,7 @@ for table in JOB_ARGS["tables"]:
         "raw-ingester-out",
         "manifests",
         table,
-        # tested using specific arguments
-        exec_date,
-        '15',
+        execution_date,
         "completed.manifest"
         )
 
