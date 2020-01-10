@@ -19,25 +19,31 @@ create table if not exists airflow_db_{{ params.env }}.transform_stage_{{ params
 
 ---
 
-insert into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.state from (
-  select distinct
-    nullif(t.$1, '-') as record_type,
-    nullif(t.$2, '-') as date,
-    nullif(t.$3, '-') as time,
-    nullif(t.$4, '-') as event,
-    nullif(t.$5, '-') as ipn,
-    nullif(t.$6, '-') as iab_flag,
-    nullif(t.$7, '-') as config_id,
-    nullif(t.$8, '-') as impression_id,
-    nullif(t.$9, '-') as ip_address,
-    nullif(t.$10, '-') as product,
-    nullif(t.$11, '-') as data,
-    nullif(t.$12, '-') as impression_guid,
-    metadata$filename as file_source,
-    convert_timezone('UTC',current_timestamp())::timestamp_ntz as load_timestamp,
-    2019070415 as run_datehour
-  from @raw_stage/stage_state_logs_{{ params.env }}/20190704/15/log/ t
-)
-file_format = raw_stage_{{ params.team_name }}.log_csv_nh_format
-on_error = continue
+insert into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.state
+select *
+from airflow_db_{{ params.env }}.raw_stage_{{ params.team_name }}.state
 ;
+
+--
+-- insert into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.state from (
+--   select distinct
+--     nullif(t.$1, '-') as record_type,
+--     nullif(t.$2, '-') as date,
+--     nullif(t.$3, '-') as time,
+--     nullif(t.$4, '-') as event,
+--     nullif(t.$5, '-') as ipn,
+--     nullif(t.$6, '-') as iab_flag,
+--     nullif(t.$7, '-') as config_id,
+--     nullif(t.$8, '-') as impression_id,
+--     nullif(t.$9, '-') as ip_address,
+--     nullif(t.$10, '-') as product,
+--     nullif(t.$11, '-') as data,
+--     nullif(t.$12, '-') as impression_guid,
+--     metadata$filename as file_source,
+--     convert_timezone('UTC',current_timestamp())::timestamp_ntz as load_timestamp,
+--     2019070415 as run_datehour
+--   from @raw_stage/stage_state_logs_{{ params.env }}/20190704/15/log/ t
+-- )
+-- file_format = raw_stage_{{ params.team_name }}.log_csv_nh_format
+-- on_error = continue
+-- ;

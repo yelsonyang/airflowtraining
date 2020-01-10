@@ -33,39 +33,7 @@ create table if not exists airflow_db_{{ params.env }}.transform_stage_{{ params
 
   ---
 
-  insert into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.click from (
-  select distinct
-    nullif(t.$1, '-') as record_type,
-    nullif(t.$2, '-') as date,
-    nullif(t.$3, '-') as time,
-    nullif(t.$4, '-') as idevent_type,
-    nullif(t.$5, '-') as placementid,
-    nullif(t.$6, '-') as ipn,
-    nullif(t.$7, '-') as idcreative,
-    nullif(t.$8, '-') as configuration_id,
-    nullif(t.$9, '-') as GUID,
-    nullif(t.$10, '-') as iab_flag,
-    nullif(t.$11, '-') as ip_address,
-    nullif(t.$12, '-') as rule_match,
-    nullif(t.$13, '-') as custom,
-    nullif(t.$14, '-') as section,
-    nullif(t.$15, '-') as keyword,
-    nullif(t.$16, '-') as privacy,
-    nullif(t.$17, '-') as parent_time,
-    nullif(t.$18, '-') as device_id,
-    nullif(t.$19, '-') as imp_id,
-    nullif(t.$20, '-') as agent_env,
-    nullif(t.$21, '-') as user_agent,
-    nullif(t.$22, '-') as impression_guid,
-    nullif(t.$23, '-') as tpplid,
-    nullif(t.$24, '-') as idcampaign,
-    nullif(t.$25, '-') as c2,
-    nullif(t.$26, '-') as c3,
-    metadata$filename as file_source,
-    convert_timezone('UTC',current_timestamp())::timestamp_ntz as load_timestamp,
-    2019070415 as run_datehour
-  from @raw_stage/stage_click_logs_{{ params.env }}/20190704/15/log/ t
-  )
-  file_format = raw_stage_{{ params.team_name }}.log_csv_nh_format
-  on_error = continue
-  ;
+insert into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.click
+select *
+from airflow_db_{{ params.env }}.raw_stage_{{ params.team_name }}.click
+;
