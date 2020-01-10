@@ -24,17 +24,7 @@ create table if not exists airflow_db_{{ params.env }}.transform_stage_{{ params
 
 ---
 
-begin name load_rl_int_2019070415;
-
----
-
-delete from airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.int
-where run_datehour = 2019070415
-;
-
----
-
-copy into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.int from (
+insert into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.int from (
   select distinct
     t.$1 as ipa,
     t.$2 as date_field,
@@ -57,7 +47,3 @@ copy into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.int
 file_format = raw_stage_{{ params.team_name }}.log_csv_nh_format
 on_error = continue
 ;
-
----
-
-commit;

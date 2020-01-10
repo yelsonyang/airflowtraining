@@ -21,17 +21,7 @@ create table if not exists airflow_db_{{ params.env }}.transform_stage_{{ params
 
 ---
 
-begin name load_rl_spot_2019070415;
-
----
-
-delete from airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.spot
-where run_datehour = 2019070415
-;
-
----
-
-copy into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.spot from (
+insert into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.spot from (
   select distinct
     nullif(t.$1, '-') as record_type,
     nullif(t.$2, '-') as date,
@@ -55,17 +45,3 @@ copy into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.spo
 file_format = raw_stage_{{ params.team_name }}.log_csv_nh_format
 on_error = continue
 ;
-
----
-
-delete from airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.spot
-where run_datehour = 2019070415
-and record_type like '#Version: %'
-or record_type like '#Date: %'
-or record_type like '#Start-Date: %'
-or record_type like '#Fields: %'
-;
-
----
-
-commit;
