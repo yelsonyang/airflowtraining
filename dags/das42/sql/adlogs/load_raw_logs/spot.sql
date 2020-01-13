@@ -21,12 +21,12 @@ create table if not exists airflow_db_{{ params.env }}.raw_stage_{{ params.team_
 
 ---
 
-begin name load_rl_spot_2019070415;
+begin name load_rl_spot_{{execution_date.strftime("%Y%m%d%H")}};
 
 ---
 
 delete from airflow_db_{{ params.env }}.raw_stage_{{ params.team_name }}.spot
-where run_datehour = 2019070415
+where run_datehour = {{execution_date.strftime("%Y%m%d%H")}}
 ;
 
 ---
@@ -49,8 +49,8 @@ copy into airflow_db_{{ params.env }}.raw_stage_{{ params.team_name }}.spot from
     nullif(t.$14, '-') as spotlight_request_guid,
     metadata$filename as file_source,
     convert_timezone('UTC',current_timestamp())::timestamp_ntz as load_timestamp,
-    2019070415 as run_datehour
-  from @raw_stage/stage_spot_logs_{{ params.env }}/20190704/15/log/ t
+    {{execution_date.strftime("%Y%m%d%H")}} as run_datehour
+  from @raw_stage/stage_spot_logs_{{ params.env }}/{{execution_date.strftime("%Y%m%d/%H")}}/log/ t
 )
 file_format = raw_stage_{{ params.team_name }}.log_csv_nh_format
 on_error = continue
@@ -59,7 +59,7 @@ on_error = continue
 ---
 
 delete from airflow_db_{{ params.env }}.raw_stage_{{ params.team_name }}.spot
-where run_datehour = 2019070415
+where run_datehour = {{execution_date.strftime("%Y%m%d%H")}}
 and record_type like '#Version: %'
 or record_type like '#Date: %'
 or record_type like '#Start-Date: %'

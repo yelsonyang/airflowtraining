@@ -24,6 +24,7 @@ create table if not exists airflow_db_{{ params.env }}.transform_stage_{{ params
 insert into airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.spot
 select *
 from airflow_db_{{ params.env }}.raw_stage_{{ params.team_name }}.spot
+where run_datehour = {{execution_date.strftime("%Y%m%d%H")}}
 ;
 
 --
