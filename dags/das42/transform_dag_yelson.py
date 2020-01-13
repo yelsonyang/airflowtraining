@@ -26,7 +26,7 @@ AWS_CONN_ID = JOB_ARGS["aws_conn_id"]
 
 # create DAG
 DAG = DAG(
-    "stage_simple_adlog",
+    "test",
     default_args=DEFAULTS,
     start_date=datetime(2018, 1, 1),
     schedule_interval=JOB_ARGS["schedule_interval"],
