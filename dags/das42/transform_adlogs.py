@@ -4,14 +4,14 @@ import logging
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.contrib.operators.snowflake_operator import SnowflakeOperator
+from airflow.sensors.base_sensor_operator import BaseSensorOperator
 from datetime import datetime, timedelta
 
 # custom utils
 from das42.utils.job_config import JobConfig
 from das42.utils.sql_utils import SqlUtils
 
-# import package S3KeySensor
-from airflow.operators import S3KeySensor
+from airflow.sensors import ExternalTaskSensor
 
 JOB_ARGS = JobConfig.get_config()
 DEFAULTS = JOB_ARGS["default_args"]
@@ -35,31 +35,39 @@ DAG = DAG(
 
 stage_finish = DummyOperator(task_id="trasnform_staging_finish")
 
+# add operator to connect dags
+
 for table in JOB_ARGS["tables"]:
+
     for process in JOB_ARGS["tables"][table]:
 
-        transform_sql_path = os.path.join(
-            JOB_ARGS["transform_sql_path"],
-            table
-            )
-
         # set the sql path for all 3 transformation processes
+
+        external_sensor = ExternalTaskSensor(
+            task_id = "external_sensor_{}".format(table),
+            external_task_id="transform_logs_{}_hourly".format(table),
+            external_dag_id = "stage_simple_adlog",
+        )
+
         process_path = os.path.join(
             JOB_ARGS["transform_log_path"],
-            process,
+            process
             )
 
         process_log = SqlUtils.load_query(process_path).split("---")
+        complete_process_log = process_log.append(process_log)
+        # add list to a list itself
 
-        transform_adlogs_job = SnowflakeOperator(
-            task_id="transform_log_{}_{}".format(table).format(process),
+        transform_process_job = SnowflakeOperator(
+            task_id="transform_process_{}".format(table),
             snowflake_conn_id=SF_CONN_ID,
             warehouse=SF_WAREHOUSE,
             database=SF_DATABASE,
-            sql=process_log,
+            sql=complete_process_log,
             params={
                 "env": ENV,
-                "team_name": TEAM_NAME
+                "team_name": TEAM_NAME,
+                "table": table
             },
             autocommit=True,
             trigger_rule='all_done',
@@ -67,4 +75,4 @@ for table in JOB_ARGS["tables"]:
         )
 
     # set the order
-    transform_adlogs_job >> stage_finish
+        external_sensor >> transform_process_job >> stage_finish

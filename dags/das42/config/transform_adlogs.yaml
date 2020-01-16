@@ -10,8 +10,6 @@ tables:
       - ipn_blacklist
     int:
       - set_interaction_smartclip_placement
-processes:
-    - ipn_blacklist
 stage_sql_path: adlogs/load_raw_logs
 transform_sql_path: adlogs/transform_logs
 # second dag sql path
