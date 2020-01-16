@@ -33,14 +33,13 @@ create table if not exists airflow_db_{{ params.env }}.raw_stage_{{ params.team_
 
 ---
 
-begin name load_rl_click_{{execution_date.strftime("%Y%m%d%H")}};
---new
-
+begin name load_rl_click_2019070415;
+-- begin name load_rl_click_'{{execution_date.strftime("%Y%m%d%H")}}'
 ---
 
 
 delete from airflow_db_{{ params.env }}.raw_stage_{{ params.team_name }}.click
-where run_datehour = {{execution_date.strftime("%Y%m%d%H")}}
+where run_datehour = 2019070415
 ;
 
 ---
@@ -75,8 +74,8 @@ copy into airflow_db_{{ params.env }}.raw_stage_{{ params.team_name }}.click fro
     nullif(t.$26, '-') as c3,
     metadata$filename as file_source,
     convert_timezone('UTC',current_timestamp())::timestamp_ntz as load_timestamp,
-    {{execution_date.strftime("%Y%m%d%H")}} as run_datehour
-  from @raw_stage/stage_click_logs_{{ params.env }}/{{execution_date.strftime("%Y%m%d/%H")}}/log/ t
+    2019070415 as run_datehour
+  from @raw_stage/stage_click_logs_{{ params.env }}/20190704/15/log/ t
 )
 file_format = raw_stage_{{ params.team_name }}.log_csv_nh_format
 on_error = continue
@@ -85,7 +84,7 @@ on_error = continue
 ---
 
 delete from airflow_db_{{ params.env }}.raw_stage_{{ params.team_name }}.click
-where run_datehour = '{{execution_date.strftime("%Y%m%d%H")}}'
+where run_datehour = 2019070415
 and record_type like '#Version: %'
 or record_type like '#Date: %'
 or record_type like '#Start-Date: %'

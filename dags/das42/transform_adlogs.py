@@ -35,42 +35,36 @@ DAG = DAG(
 
 stage_finish = DummyOperator(task_id="trasnform_staging_finish")
 
-# table_group_1 = table[imp, click, state]
-# table_group_2 = [imp, click]
-# table_group_3 = [int]
-
-# recursive table jobs for the stage_simple_adlog
 for table in JOB_ARGS["tables"]:
+    for process in JOB_ARGS["tables"][table]:
 
-    transform_sql_path = os.path.join(
-        JOB_ARGS["transform_sql_path"],
-        table
+        transform_sql_path = os.path.join(
+            JOB_ARGS["transform_sql_path"],
+            table
+            )
+
+        # set the sql path for all 3 transformation processes
+        process_path = os.path.join(
+            JOB_ARGS["transform_log_path"],
+            process,
+            )
+
+        process_log = SqlUtils.load_query(process_path).split("---")
+
+        transform_adlogs_job = SnowflakeOperator(
+            task_id="transform_log_{}_{}".format(table).format(process),
+            snowflake_conn_id=SF_CONN_ID,
+            warehouse=SF_WAREHOUSE,
+            database=SF_DATABASE,
+            sql=process_log,
+            params={
+                "env": ENV,
+                "team_name": TEAM_NAME
+            },
+            autocommit=True,
+            trigger_rule='all_done',
+            dag=DAG
         )
-
-    # ipn_blacklist process
-    ipn_blacklist_path = os.path.join(
-        JOB_ARGS["transform_log_path"],
-        "ipn_blacklist",
-        )
-
-    transform_ipn_blacklist_log = SqlUtils.load_query(ipn_blacklist_path).split("---")
-
-    # table_group_1 = table[1, 0, 5]
-
-    transform_ipn_blacklist_job = SnowflakeOperator(
-        task_id="transform_ipn_blacklist_{}".format(table),
-        snowflake_conn_id=SF_CONN_ID,
-        warehouse=SF_WAREHOUSE,
-        database=SF_DATABASE,
-        sql=transform_ipn_blacklist_log,
-        params={
-            "env": ENV,
-            "team_name": TEAM_NAME
-        },
-        autocommit=True,
-        trigger_rule='all_done',
-        dag=DAG
-    )
 
     # set the order
-    transform_ipn_blacklist_job >> stage_finish
+    transform_adlogs_job >> stage_finish
