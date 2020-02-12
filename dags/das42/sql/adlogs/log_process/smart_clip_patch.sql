@@ -1,7 +1,4 @@
---Business goal is to elimnate records with invalid smartclips, send those rows to an admin table for review, and
---then update placementids of the new logs (after they've been purged) by comparing the unhex codes to the larger db.
 
---update TYPE_CLICK to eliminate invalid smartclip rows
 update airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.{{ params.table }}
 set iab_flag = 's'
 where (
@@ -11,7 +8,7 @@ where (
     and iab_flag in ('w', 'x'));
 
 ---
---create admin table filled with recently purged smartclips for review
+
 create or replace table airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.{{ params.table }}_purged_smartclip_rows as
 (
 select
@@ -28,8 +25,6 @@ where
 
 ---
 
---update TYPE_CLICK to set placementids for the valid smartclips. Do this by comparing the unhex codes
---between TYPE_CLICK and the larger db.
 update airflow_db_{{ params.env }}.transform_stage_{{ params.team_name }}.{{ params.table }} as c
 set placementid = sc.placementid
 from dimensions.placement_smartclip sc

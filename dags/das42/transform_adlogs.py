@@ -39,40 +39,57 @@ stage_finish = DummyOperator(task_id="trasnform_staging_finish")
 
 for table in JOB_ARGS["tables"]:
 
+    external_sensor = ExternalTaskSensor(
+        task_id = "external_sensor_{}".format(table),
+        external_task_id="transform_logs_{}_hourly".format(table),
+        external_dag_id = "stage_simple_adlog",
+    )
+
+    completed_process_log = []
     for process in JOB_ARGS["tables"][table]:
-
-        # set the sql path for all 3 transformation processes
-
-        external_sensor = ExternalTaskSensor(
-            task_id = "external_sensor_{}".format(table),
-            external_task_id="transform_logs_{}_hourly".format(table),
-            external_dag_id = "stage_simple_adlog",
-        )
 
         process_path = os.path.join(
             JOB_ARGS["transform_log_path"],
             process
             )
 
-        process_log = SqlUtils.load_query(process_path).split("---")
-        complete_process_log = process_log.append(process_log)
-        # add list to a list itself
+        # try #1 - wrong
+        # process_log = SqlUtils.load_query(process_path) #str
+        # completed_process_log = "".join(process_log).split("---") #list of str
 
-        transform_process_job = SnowflakeOperator(
-            task_id="transform_process_{}".format(table),
-            snowflake_conn_id=SF_CONN_ID,
-            warehouse=SF_WAREHOUSE,
-            database=SF_DATABASE,
-            sql=complete_process_log,
-            params={
-                "env": ENV,
-                "team_name": TEAM_NAME,
-                "table": table
-            },
-            autocommit=True,
-            trigger_rule='all_done',
-            dag=DAG
-        )
+        # # try #2 - wrong
+        # process_log = SqlUtils.load_query(process_path).split("---") #list
+        # completed_process_log = [].append(process_log) #nested list
+        # # temp_string = ''.join(process_log) #str
+        # # completed_process_log.append(temp_string) #list.append(str) -- list of str
+
+        process_log = SqlUtils.load_query(process_path) #str
+        completed_process_log.append(process_log)
+        subList = [elem.split("---") for elem in completed_process_log]
+        newList = [l for elem in subList for l in elem]
+
+        # logging.info('find here')
+        # logging.info(type(process_log))
+        # logging.info(process_log)
+        # logging.info("look at completed process log")
+        # logging.info(type(completed_process_log))
+        # logging.info(completed_process_log)
+
+    transform_process_job = SnowflakeOperator(
+        task_id="transform_process_{}".format(table),
+        snowflake_conn_id=SF_CONN_ID,
+        warehouse=SF_WAREHOUSE,
+        database=SF_DATABASE,
+        sql=newList,
+        params={
+            "env": ENV,
+            "team_name": TEAM_NAME,
+            "table": table
+        },
+        autocommit=True,
+        trigger_rule='all_done',
+        dag=DAG
+    )
 
     # set the order
-        external_sensor >> transform_process_job >> stage_finish
+    external_sensor >> transform_process_job >> stage_finish
