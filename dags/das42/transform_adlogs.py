@@ -12,6 +12,10 @@ from das42.utils.sql_utils import SqlUtils
 
 # import package S3KeySensor
 from airflow.operators import S3KeySensor
+from airflow.sensors.base_sensor_operator import BaseSensorOperator
+from airflow.sensors import ExternalTaskSensor
+
+
 
 JOB_ARGS = JobConfig.get_config()
 DEFAULTS = JOB_ARGS["default_args"]
@@ -33,38 +37,46 @@ DAG = DAG(
     catchup=False
 )
 
-stage_finish = DummyOperator(task_id="trasnform_staging_finish")
+transform_finish = DummyOperator(task_id="trasnform_staging_finish")
 
 for table in JOB_ARGS["tables"]:
+
+    dag_dependency = ExternalTaskSensor(
+    task_id="previous_dag_complete_{}".format(table),
+    external_dag_id = 'stage_simple_adlog',
+    external_task_id = "transform_logs_{}_hourly".format(table)
+    )
+
+    completed_process_log = []
+
     for process in JOB_ARGS["tables"][table]:
 
-        transform_sql_path = os.path.join(
-            JOB_ARGS["transform_sql_path"],
-            table
-            )
-
-        # set the sql path for all 3 transformation processes
         process_path = os.path.join(
             JOB_ARGS["transform_log_path"],
-            process,
+            process
             )
 
-        process_log = SqlUtils.load_query(process_path).split("---")
+        process_log = SqlUtils.load_query(process_path) # string
+        completed_process_log.append(process_log) # nested list
 
-        transform_adlogs_job = SnowflakeOperator(
-            task_id="transform_log_{}_{}".format(table).format(process),
-            snowflake_conn_id=SF_CONN_ID,
-            warehouse=SF_WAREHOUSE,
-            database=SF_DATABASE,
-            sql=process_log,
-            params={
-                "env": ENV,
-                "team_name": TEAM_NAME
-            },
-            autocommit=True,
-            trigger_rule='all_done',
-            dag=DAG
-        )
+        subList = [elem.split("---") for elem in completed_process_log]
+        newList = [l for elem in subList for l in elem] 
 
-    # set the order
-    transform_adlogs_job >> stage_finish
+    transform_adlogs_job = SnowflakeOperator(
+        task_id="transform_log_{}_process".format(table),
+        snowflake_conn_id=SF_CONN_ID,
+        warehouse=SF_WAREHOUSE,
+        database=SF_DATABASE,
+        sql=newList,
+        params={
+            "env": ENV,
+            "team_name": TEAM_NAME,
+            "table": table
+        },
+        autocommit=True,
+        trigger_rule='all_done',
+        dag=DAG
+    )
+
+# set the order
+    dag_dependency >> transform_adlogs_job >> transform_finish
